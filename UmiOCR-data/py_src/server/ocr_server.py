@@ -36,6 +36,14 @@ def get_ocr_options(is_format=True):
         "default": [],
         "type": "var",
     }
+    # 置信度过滤
+    opts["tbpu.minScore"] = {
+        "title": "过滤低置信度文本",
+        "toolTip": "丢弃识别置信度低于该数值的结果，取值范围 0~1，0 表示不过滤",
+        "default": 0.0,
+        "min": 0,
+        "max": 1,
+    }
     # 输出格式
     if is_format:
         opts["data.format"] = {
@@ -69,12 +77,20 @@ def check_ocr_options(opts):
                     isinstance(x, (int, float))
                     for x in [a[0][0], a[0][1], a[1][0], a[1][1]]
                 )
-            ):
+                ):
                 raise Exception(
                     f"tbpu.ignoreArea 中，每一项的格式必须是 [[x1,y1],[x2,y2]] 。当前值不合法： {ia}"
                 )
             new_ia.append([[a[0][0], a[0][1]], [], [a[1][0], a[1][1]], []])
         opts["tbpu.ignoreArea"] = new_ia
+    # 检查最低置信度参数
+    min_score = opts.get("tbpu.minScore", 0)
+    if isinstance(min_score, (int, float)):
+        if min_score < 0 or min_score > 1:
+            raise Exception("tbpu.minScore 取值范围应在 0~1 之间。")
+        opts["tbpu.minScore"] = float(min_score)
+    else:
+        raise Exception("tbpu.minScore 应为数字。")
     return opts
 
 
