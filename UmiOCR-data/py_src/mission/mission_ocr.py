@@ -94,23 +94,33 @@ class __MissionOcrClass(Mission):
             }
         # 任务成功时的后处理
         if res["code"] == 100:
-            # 计算平均置信度
-            score, num = 0, 0
-            for r in res["data"]:
-                score += r["score"]
-                num += 1
-            if num > 0:
-                score /= num
-            res["score"] = score
-            # 执行 tbpu
-            if msnInfo["tbpu"]:
-                for tbpu in msnInfo["tbpu"]:
-                    res["data"] = tbpu.run(res["data"])
-                    # 如果忽略区域等处理将所有文本删除，则结束tbpu
-                    if not res["data"]:
-                        res["code"] = 101
-                        res["data"] = ""
-                        break
+            min_score = msnInfo["argd"].get("tbpu.minScore", 0)
+            if isinstance(min_score, (int, float)) and min_score > 0:
+                res["data"] = [
+                    tb for tb in res["data"] if tb.get("score", 0) >= min_score
+                ]
+                if not res["data"]:
+                    res["code"] = 101
+                    res["data"] = ""
+            # 如果过滤后仍有数据，计算平均置信度
+            if res["code"] == 100:
+                # 计算平均置信度
+                score, num = 0, 0
+                for r in res["data"]:
+                    score += r["score"]
+                    num += 1
+                if num > 0:
+                    score /= num
+                res["score"] = score
+                # 执行 tbpu
+                if msnInfo["tbpu"]:
+                    for tbpu in msnInfo["tbpu"]:
+                        res["data"] = tbpu.run(res["data"])
+                        # 如果忽略区域等处理将所有文本删除，则结束tbpu
+                        if not res["data"]:
+                            res["code"] = 101
+                            res["data"] = ""
+                            break
         return res
 
     # ========================= 【qml接口】 =========================
